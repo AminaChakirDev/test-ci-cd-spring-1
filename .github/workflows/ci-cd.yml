@@ -59,38 +59,38 @@ jobs:
       - name: Clone or update project on server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          if [ -d /root/dc ]; then
-            if [ -d /root/dc/.git ]; then
+          if [ -d /${{ secrets.SERVER_USER }}/wildblog-api ]; then
+            if [ -d /${{ secrets.SERVER_USER }}/wildblog-api/.git ]; then
               echo 'Repository already exists. Pulling latest changes...';
-              cd /root/dc;
+              cd /${{ secrets.SERVER_USER }}/wildblog-api;
               git reset --hard;
               git pull origin main;
             else
               echo 'Invalid directory exists. Cleaning up and cloning again...';
-              rm -rf /root/dc;
-              git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /root/dc;
+              rm -rf /${{ secrets.SERVER_USER }}/wildblog-api;
+              git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /${{ secrets.SERVER_USER }}/wildblog-api;
             fi
           else
             echo 'Cloning repository...';
-            git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /root/dc;
+            git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /${{ secrets.SERVER_USER }}/wildblog-api;
           fi
           "
 
       - name: Generate .env file on server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          echo 'SPRING_PROFILES_ACTIVE=prod' > /root/dc/.env.prod &&
-          echo 'DB_NAME=${{ secrets.DB_NAME }}' >> /root/dc/.env.prod &&
-          echo 'SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}' >> /root/dc/.env.prod &&
-          echo 'SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}' >> /root/dc/.env.prod &&
-          echo 'SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}' >> /root/dc/.env.prod &&
-          echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /root/dc/.env.prod
+          echo 'SPRING_PROFILES_ACTIVE=prod' > /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          echo 'DB_NAME=${{ secrets.DB_NAME }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          echo 'SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          echo 'SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          echo 'SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
           "
 
       - name: Build and Deploy Docker Compose
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          cd /root/dc &&
+          cd /${{ secrets.SERVER_USER }}/wildblog-api &&
           docker compose down &&
           docker compose --env-file .env.prod up -d --build
           "
