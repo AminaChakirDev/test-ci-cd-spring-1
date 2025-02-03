@@ -1,0 +1,69 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Application
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Add SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH connection successful!'"
+
+      - name: Clone or update project on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          if [ -d /root/dc ]; then
+            if [ -d /root/dc/.git ]; then
+              echo 'Repository already exists. Pulling latest changes...';
+              cd /root/dc;
+              git reset --hard;
+              git pull origin main;
+            else
+              echo 'Invalid directory exists. Cleaning up and cloning again...';
+              rm -rf /root/dc;
+              git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /root/dc;
+            fi
+          else
+            echo 'Cloning repository...';
+            git clone git@github.com:${{ secrets.REPOSITORY_NAME }} /root/dc;
+          fi
+          "
+
+      - name: Generate .env file on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          echo 'SPRING_PROFILES_ACTIVE=prod' > /root/dc/.env.prod &&
+          echo 'DB_NAME=${{ secrets.DB_NAME }}' >> /root/dc/.env.prod &&
+          echo 'SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}' >> /root/dc/.env.prod &&
+          echo 'SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}' >> /root/dc/.env.prod &&
+          echo 'SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}' >> /root/dc/.env.prod &&
+          echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /root/dc/.env.prod
+          "
+
+      - name: Build and Deploy Docker Compose
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd /root/dc &&
+          docker compose down &&
+          docker compose --env-file .env.prod up -d --build
+          "
+
+      - name: Verify deployment
+        run: |
+          curl -X GET http://${{ secrets.SERVER_IP }}:8080/api/items || exit 1
