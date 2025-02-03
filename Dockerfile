@@ -5,7 +5,7 @@ FROM eclipse-temurin:21-jdk-jammy
 WORKDIR /app
 
 # Copie le fichier JAR dans le conteneur
-COPY target/dc-0.0.1-SNAPSHOT.jar app.jar
+COPY target/wildblog-api-0.0.1-SNAPSHOT.jar app.jar
 
 # Expose le port 8080 pour permettre l’accès à l’application
 EXPOSE 8080
