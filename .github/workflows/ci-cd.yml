@@ -87,19 +87,6 @@ jobs:
           echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /home/${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           chmod 600 /home/${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
           "
-      - name: Verify files exist on server
-        run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          if [ ! -f /home/ubuntu/wildblog-api/target/wildblog-api-0.0.1-SNAPSHOT.jar ]; then
-            echo 'JAR file not found!';
-            exit 1;
-          fi
-          if [ ! -f /home/ubuntu/wildblog-api/.env.prod ]; then
-            echo '.env.prod file not found!';
-            exit 1;
-          fi
-          echo 'All necessary files are present!';
-          "
 
       - name: Build Docker image and deploy
         run: |
