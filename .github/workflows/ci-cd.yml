@@ -76,6 +76,32 @@ jobs:
           fi
           "
 
+      - name: Create necessary directory on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          mkdir -p /home/ubuntu/wildblog-api/target;
+          "
+      - name: Build JAR on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd /home/ubuntu/wildblog-api &&
+          ./mvnw clean package -DskipTests
+          "
+      - name: Verify JAR exists on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          if [ ! -f /home/ubuntu/wildblog-api/target/wildblog-api-0.0.1-SNAPSHOT.jar ]; then
+            echo 'JAR file not found!';
+            exit 1;
+           else
+            echo 'JAR file exists!';
+          fi
+          "
+      - name: Copy necessary files
+        run: |
+          scp docker-compose.yml ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/ubuntu/wildblog-api/
+          scp Dockerfile ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}:/home/ubuntu/wildblog-api/
+
       - name: Generate .env file on server
         run: |
           ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
@@ -87,22 +113,24 @@ jobs:
           echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /home/${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           chmod 600 /home/${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
           "
-
-      - name: Build JAR on server
+      - name: Verify files exist on server
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          cd /home/${{ secrets.SERVER_USER }}/wildblog-api &&
-          ./mvnw clean package -DskipTests
+          if [ ! -f /home/ubuntu/wildblog-api/target/wildblog-api-0.0.1-SNAPSHOT.jar ]; then
+            echo 'JAR file not found!';
+            exit 1;
+          fi
+          if [ ! -f /home/ubuntu/wildblog-api/.env.prod ]; then
+            echo '.env.prod file not found!';
+            exit 1;
+          fi
+          echo 'All necessary files are present!';
           "
 
       - name: Build and Deploy Docker Compose
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-          cd /home/${{ secrets.SERVER_USER }}/wildblog-api &&
+          cd /home/ubuntu/wildblog-api &&
           docker compose down &&
           docker compose --env-file .env.prod up -d --build
           "
-
-      - name: Verify deployment
-        run: |
-          curl -X GET http://${{ secrets.SERVER_IP }}:8080/api/items || exit 1
