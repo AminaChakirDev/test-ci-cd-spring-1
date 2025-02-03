@@ -1,4 +1,4 @@
-name: Continuous Integration (CI)
+name: CI/CD Pipeline
 
 on:
   push:
@@ -54,11 +54,11 @@ jobs:
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
-        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH connection successful!'"
+        run: ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "echo 'SSH connection successful!'"
 
       - name: Clone or update project on server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           if [ -d /${{ secrets.SERVER_USER }}/wildblog-api ]; then
             if [ -d /${{ secrets.SERVER_USER }}/wildblog-api/.git ]; then
               echo 'Repository already exists. Pulling latest changes...';
@@ -78,13 +78,14 @@ jobs:
 
       - name: Generate .env file on server
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           echo 'SPRING_PROFILES_ACTIVE=prod' > /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           echo 'DB_NAME=${{ secrets.DB_NAME }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           echo 'SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           echo 'SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
           echo 'SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
-          echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
+          echo 'SPRING_JPA_HIBERNATE_DDL_AUTO=${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}' >> /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod &&
+          chmod 600 /${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
           "
 
       - name: Build and Deploy Docker Compose
