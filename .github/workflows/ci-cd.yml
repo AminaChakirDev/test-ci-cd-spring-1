@@ -88,6 +88,13 @@ jobs:
           chmod 600 /home/${{ secrets.SERVER_USER }}/wildblog-api/.env.prod
           "
 
+      - name: Build JAR on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd /root/dc &&
+          ./mvnw clean package -DskipTests
+          "
+
       - name: Build and Deploy Docker Compose
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
